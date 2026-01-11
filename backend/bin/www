@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+
+import app from '../app.js';
+import debugLib from 'debug';
+import http from 'http';
+import { connectDB as CONNECT_DB } from "../config/mongodb.js";
+
+const debug = debugLib('backend:server');
+const port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Normalize port
+ */
+function normalizePort(val) {
+  const port = parseInt(val, 10);
+  if (isNaN(port)) return val;
+  if (port >= 0) return port;
+  return false;
+}
+
+/**
+ * Event listeners
+ */
+function onError(error, server) {
+  if (error.syscall !== 'listen') throw error;
+  const bind = typeof port === 'string' ? 'Pipe ' + port : 'Port ' + port;
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+    default:
+      throw error;
+  }
+}
+
+function onListening(server) {
+  const addr = server.address();
+  const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+  console.log('Server running on ' + bind);
+}
+
+/**
+ * Kết nối DB rồi start server
+ */
+(async () => {
+  try {
+    console.log("1. Connecting to MongoDB...");
+    await CONNECT_DB();
+    console.log("2. Connected to MongoDB");
+
+    console.log("3. Starting server...");
+    const server = http.createServer(app);
+
+    server.listen(port);
+    server.on('error', (err) => onError(err, server));
+    server.on('listening', () => onListening(server));
+
+  } catch (error) {
+    console.error("Failed to start server due to DB connection error", error);
+    process.exit(1);
+  }
+})();
